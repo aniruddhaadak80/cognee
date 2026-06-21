@@ -218,6 +218,9 @@ def _get_api_key_fingerprint() -> str:
     return _get_api_key_tracking_id()
 
 
+_TELEMETRY_TASKS: set[asyncio.Task] = set()
+
+
 def send_telemetry(event_name: str, user_id: str | UUID, additional_properties: dict | None = None):
     """Send a product telemetry event.
 
@@ -270,7 +273,11 @@ def send_telemetry(event_name: str, user_id: str | UUID, additional_properties: 
     }
 
     loop = asyncio.get_running_loop()
-    loop.create_task(_send_telemetry_request(payload))
+    task = loop.create_task(_send_telemetry_request(payload))
+    if task is not None:
+        _TELEMETRY_TASKS.add(task)
+        if hasattr(task, "add_done_callback"):
+            task.add_done_callback(_TELEMETRY_TASKS.discard)
 
 
 def embed_logo(p: Any, layout_scale: float, logo_alpha: float, position: str):
