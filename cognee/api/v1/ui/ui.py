@@ -497,6 +497,7 @@ def start_ui(
 
     logger.info("✓ All required ports are available")
     backend_process = None
+    mcp_process = None
 
     if start_mcp:
         logger.info("Starting Cognee MCP server with Docker...")
@@ -762,6 +763,17 @@ def start_ui(
                 try:
                     backend_process.kill()
                     backend_process.wait()
+                except (OSError, ProcessLookupError):
+                    pass
+        if mcp_process:
+            logger.info("Cleaning up MCP process due to frontend failure...")
+            try:
+                mcp_process.terminate()
+                mcp_process.wait(timeout=5)
+            except (subprocess.TimeoutExpired, OSError, ProcessLookupError):
+                try:
+                    mcp_process.kill()
+                    mcp_process.wait()
                 except (OSError, ProcessLookupError):
                     pass
         return None
