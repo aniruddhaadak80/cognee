@@ -40,5 +40,6 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@users.noreply.github.com"
           git add CONTRIBUTORS.md
-          git commit -m "Update contributors list"
-          git push
+          # The leaderboard is often unchanged week to week; committing with
+          # nothing staged exits 1 and fails the run, so only commit on diff.
+          git diff --cached --quiet || { git commit -m "Update contributors list" && git push; }
