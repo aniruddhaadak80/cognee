@@ -41,14 +41,15 @@ const DATA_SOURCE_PROVIDERS = DATA_SOURCE_CARDS.map((card) => card.key);
 interface AgentDef { name: string; logo: string; prefixes: string[] }
 
 // Persistent agents — always listed in the memory graph. They read as "live"
-// only while a matching session is actively running; with no active session
-// they show disconnected. Keep prefixes in sync with the shipped plugins.
-const PERSISTENT_AGENT_DEFS: AgentDef[] = [
-  { name: "Claude Code", logo: "claude", prefixes: ["claude_", "cc_"] },
-  { name: "Codex", logo: "codex", prefixes: ["codex_"] },
-  { name: "Claude Desktop", logo: "claude", prefixes: ["claude_desktop_"] },
-  { name: "OpenClaw", logo: "openclaw", prefixes: ["openclaw_"] },
-];
+ // only while a matching session is actively running; with no active session
+ // they show disconnected. Keep prefixes in sync with the shipped plugins.
+ const PERSISTENT_AGENT_DEFS: AgentDef[] = [
+   { name: "Claude Code", logo: "claude", prefixes: ["claude_", "cc_"] },
+   { name: "Codex", logo: "codex", prefixes: ["codex_"] },
+   { name: "OpenCode", logo: "opencode", prefixes: ["opencode_"] },
+   { name: "Claude Desktop", logo: "claude", prefixes: ["claude_desktop_"] },
+   { name: "OpenClaw", logo: "openclaw", prefixes: ["openclaw_"] },
+ ];
 
 // Dynamic agents — NOT shown by default. They appear only once they've
 // registered (a session with their prefix has been seen), then follow the same

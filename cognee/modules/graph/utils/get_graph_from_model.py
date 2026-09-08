@@ -166,6 +166,9 @@ def _split_fields(
 
         if field_name == "belongs_to_set":
             properties[field_name] = _node_set_names(field_value)
+        elif field_name == "external_metadata":
+            # Preserve external_metadata on graph nodes for retrieval filtering
+            properties[field_name] = field_value
         else:
             excluded.add(field_name)
 
