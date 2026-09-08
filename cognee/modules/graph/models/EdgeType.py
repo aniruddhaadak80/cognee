@@ -1,4 +1,6 @@
 from cognee.infrastructure.engine import DataPoint
+from cognee.modules.engine.models.node_set import NodeSet
+from cognee.infrastructure.engine.utils.generate_node_id import generate_node_id
 
 
 class EdgeType(DataPoint):
@@ -13,3 +15,8 @@ class EdgeType(DataPoint):
         "index_fields": ["relationship_name"],
         "identity_fields": ["relationship_name"],
     }
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Derive belongs_to_set from the relationship's source/target nodes if available
+        # This will be set by the caller after checking node sets

@@ -525,12 +525,22 @@ def _create_triplets_from_graph(nodes: List[DataPoint], edges: List[tuple]) -> L
             continue
         seen_ids.add(triplet_id)
 
+        # Combine belongs_to_set from source and target nodes
+        belongs_to_set = []
+        if hasattr(source_node, "belongs_to_set") and source_node.belongs_to_set:
+            belongs_to_set.extend(source_node.belongs_to_set)
+        if hasattr(target_node, "belongs_to_set") and target_node.belongs_to_set:
+            belongs_to_set.extend(target_node.belongs_to_set)
+        # Deduplicate while preserving order
+        belongs_to_set = list(dict.fromkeys(belongs_to_set))
+
         triplets.append(
             Triplet(
                 id=triplet_id,
                 from_node_id=str(source_node_id),
                 to_node_id=str(target_node_id),
                 text=embeddable_text,
+                belongs_to_set=belongs_to_set if belongs_to_set else None,
             )
         )
 

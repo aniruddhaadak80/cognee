@@ -165,8 +165,23 @@ def _process_single_triplet(
     relationship_name = relationship.get("relationship_name", "")
     triplet_id = generate_node_id(str(start_node_id) + str(relationship_name) + str(end_node_id))
 
+    # Combine belongs_to_set from start and end nodes
+    belongs_to_set = []
+    start_node_bts = start_node.get("belongs_to_set")
+    if start_node_bts:
+        belongs_to_set.extend(start_node_bts)
+    end_node_bts = end_node.get("belongs_to_set")
+    if end_node_bts:
+        belongs_to_set.extend(end_node_bts)
+    # Deduplicate while preserving order
+    belongs_to_set = list(dict.fromkeys(belongs_to_set))
+
     triplet_obj = Triplet(
-        id=triplet_id, from_node_id=start_node_id, to_node_id=end_node_id, text=embeddable_text
+        id=triplet_id,
+        from_node_id=start_node_id,
+        to_node_id=end_node_id,
+        text=embeddable_text,
+        belongs_to_set=belongs_to_set if belongs_to_set else None,
     )
 
     return triplet_obj, None

@@ -39,15 +39,41 @@ def _get_edge_text(edge) -> str:
 def create_edge_type_datapoints(edges_data) -> list[EdgeType]:
     """Transform raw edge data into EdgeType datapoints."""
     edge_texts = []
+    edge_to_nodesets = {}  # Map edge_text to set of node set names
+
     for edge in edges_data:
         edge_text = _get_edge_text(edge)
         if edge_text:
             edge_texts.append(edge_text)
 
+            # Extract node sets from the edge properties if available
+            properties = _get_edge_properties(edge)
+            node_sets = set()
+            if isinstance(properties, dict):
+                source_bts = properties.get("source_belongs_to_set") or properties.get(
+                    "belongs_to_set"
+                )
+                target_bts = properties.get("target_belongs_to_set")
+                if source_bts:
+                    node_sets.update(source_bts if isinstance(source_bts, list) else [source_bts])
+                if target_bts:
+                    node_sets.update(target_bts if isinstance(target_bts, list) else [target_bts])
+
+            if node_sets:
+                if edge_text not in edge_to_nodesets:
+                    edge_to_nodesets[edge_text] = set()
+                edge_to_nodesets[edge_text].update(node_sets)
+
     edge_types = Counter(edge_texts)
 
     return [
-        EdgeType(relationship_name=text, number_of_edges=count)
+        EdgeType(
+            relationship_name=text,
+            number_of_edges=count,
+            belongs_to_set=list(edge_to_nodesets.get(text, []))
+            if edge_to_nodesets.get(text)
+            else None,
+        )
         for text, count in edge_types.items()
     ]
 
