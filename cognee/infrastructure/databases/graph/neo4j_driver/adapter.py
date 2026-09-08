@@ -2320,27 +2320,37 @@ class Neo4jAdapter(GraphDBInterface):
             A dictionary containing graph metrics, both mandatory and optional based on the
             input flag.
         """
+        # Use COUNT queries to avoid materializing the entire graph (fixes OOM on large graphs)
+        count_nodes_query = f"MATCH (n:`{BASE_LABEL}`) RETURN count(n) AS num_nodes"
+        count_edges_query = (
+            f"MATCH (n:`{BASE_LABEL}`)-[r]->(m:`{BASE_LABEL}`) RETURN count(r) AS num_edges"
+        )
 
-        nodes, edges = await self.get_model_independent_graph_data()
-        graph_name = "myGraph"
-        await self.drop_graph(graph_name)
-        await self.project_entire_graph(graph_name)
+        count_nodes_result = await self.query(count_nodes_query)
+        count_edges_result = await self.query(count_edges_query)
 
-        num_nodes = len(nodes[0]["nodes"])
-        num_edges = len(edges[0]["elements"])
+        num_nodes = count_nodes_result[0]["num_nodes"] if count_nodes_result else 0
+        num_edges = count_edges_result[0]["num_edges"] if count_edges_result else 0
 
         mandatory_metrics = {
             "num_nodes": num_nodes,
             "num_edges": num_edges,
             "mean_degree": (2 * num_edges) / num_nodes if num_nodes != 0 else None,
             "edge_density": await get_edge_density(self),
-            "num_connected_components": await get_num_connected_components(self, graph_name),
-            "sizes_of_connected_components": await get_size_of_connected_components(
-                self, graph_name
-            ),
         }
 
         if include_optional:
+            graph_name = "myGraph"
+            await self.drop_graph(graph_name)
+            await self.project_entire_graph(graph_name)
+
+            mandatory_metrics["num_connected_components"] = await get_num_connected_components(
+                self, graph_name
+            )
+            mandatory_metrics[
+                "sizes_of_connected_components"
+            ] = await get_size_of_connected_components(self, graph_name)
+
             shortest_path_lengths = await get_shortest_path_lengths(self, graph_name)
             optional_metrics = {
                 "num_selfloops": await count_self_loops(self),
@@ -2356,6 +2366,8 @@ class Neo4jAdapter(GraphDBInterface):
                 "diameter": -1,
                 "avg_shortest_path_length": -1,
                 "avg_clustering": -1,
+                "num_connected_components": -1,
+                "sizes_of_connected_components": -1,
             }
 
         return mandatory_metrics | optional_metrics
