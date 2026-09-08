@@ -1,0 +1,26 @@
+id: opencode
+title: Cognee plugin for OpenCode
+kind: integration
+stack: agent-runtime
+tags:
+  - opencode
+  - python
+  - session-storage
+  - context-lookup
+  - terminal
+summary: Persist OpenCode sessions to cognee and surface relevant prior context automatically on prompt.
+what_youll_build: An OpenCode setup where each session's history is captured to a knowledge graph and past decisions surface as context on future prompts.
+quickstart: |
+  # Install the cognee plugin for OpenCode (from cognee-integrations repo)
+  opencode plugin install topoteretes/cognee-integrations/integrations/opencode
+  export LLM_API_KEY=your_openai_key  # local mode; the plugin bootstraps a local cognee API
+  opencode  # first launch runs the SessionStart hook and connects memory
+expected_output: |
+  A confirmation from the plugin that turns are being stored, plus a recall
+  invoked from a follow-up session that returns prior context about the same
+  project.
+difficulty: medium
+repo: topoteretes/cognee-integrations
+path: integrations/opencode
+inventory_slug: opencode
+docs_url: https://docs.cognee.ai/integrations/opencode
