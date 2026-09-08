@@ -863,9 +863,34 @@ class PGVectorAdapter(SQLAlchemyAdapter, VectorDBInterface):
         return None
 
     async def prune(self):
-        """Drop all vector collection tables and reset cached reflection metadata."""
+        """Drop all vector collection tables and reset cached reflection metadata.
+
+        Only drops tables matching the vector collection naming pattern
+        ({PascalCaseType}_{field}) to avoid dropping the shared relational
+        schema when running in single-tenant mode (schema=None).
+        """
+        import re
+        from sqlalchemy import MetaData, text
+
         self._metadata.clear()
-        await self.delete_database()
+
+        # Vector collections follow the pattern: {PascalCaseType}_{field}
+        # e.g., Entity_name, DocumentChunk_text, etc.
+        vector_collection_pattern = re.compile(r"^[A-Z][a-zA-Z0-9]*_[a-zA-Z0-9_]+$")
+
+        if not self.schema:
+            # Single-tenant mode: only drop vector collection tables in public schema
+            async with self.engine.begin() as connection:
+                metadata = MetaData()
+                await connection.run_sync(metadata.reflect, schema="public")
+                for table in metadata.sorted_tables:
+                    if vector_collection_pattern.match(table.name):
+                        await connection.execute(
+                            text(f'DROP TABLE IF EXISTS "public"."{table.name}" CASCADE')
+                        )
+        else:
+            # Multi-tenant mode: drop all tables in the dataset's schema
+            await self.delete_database()
 
     async def run_migrations(self):
         """Run PGVector adapter migrations (currently no-op)."""
