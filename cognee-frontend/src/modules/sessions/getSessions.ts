@@ -76,6 +76,7 @@ const CHANNEL_DEFS: Array<{ name: string; prefixes: string[] }> = [
   { name: "Claude Desktop", prefixes: ["claude_desktop_"] },
   { name: "Claude Code", prefixes: ["claude_", "cc_"] },
   { name: "Codex", prefixes: ["codex_"] },
+  { name: "OpenCode", prefixes: ["opencode_"] },
   { name: "OpenClaw", prefixes: ["openclaw_"] },
   { name: "Hermes Agent", prefixes: ["hermes_"] },
   { name: "VS Code", prefixes: ["vscode_"] },
