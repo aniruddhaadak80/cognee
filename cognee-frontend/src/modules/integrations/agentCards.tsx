@@ -2,6 +2,7 @@ import {
   OPENCLAW_PROMPT,
   CLAUDE_MARKETPLACE_ADD, CLAUDE_PLUGIN_INSTALL,
   CODEX_HOOKS_ENABLE, CODEX_MARKETPLACE_ADD, CODEX_PLUGIN_INSTALL,
+  OPENCODE_HOOKS_ENABLE, OPENCODE_MARKETPLACE_ADD, OPENCODE_PLUGIN_INSTALL,
   MCP_STDIO_CONFIG, HERMES_MCP_CONFIG, genericSkillInstall, fillTemplate,
   UPLOAD_MEMORY_PROMPT, UPLOAD_SAMPLE_PROMPT, RECALL_SAMPLE_PROMPT,
 } from "@/data/prompts";
@@ -100,6 +101,45 @@ export const AGENT_CARDS: SetupConnectorCfg[] = [
       // OpenClaw only loads AGENTS.md from its workspace directory, not the project root.
       { title: "Create the workspace AGENTS.md", description: "Run this command to add the Cognee memory instructions to OpenClaw's workspace. An existing AGENTS.md is backed up to AGENTS.md.bak — merge it manually afterwards.", code: "~/.openclaw/workspace/AGENTS.md", codeToCopy: `mkdir -p ~/.openclaw/workspace && [ -f ~/.openclaw/workspace/AGENTS.md ] && cp ~/.openclaw/workspace/AGENTS.md ~/.openclaw/workspace/AGENTS.md.bak; cat > ~/.openclaw/workspace/AGENTS.md << 'COGNEE_EOF'\n${OPENCLAW_PROMPT}\nCOGNEE_EOF` },
       { title: "Test the connection", description: `Open OpenClaw and ask: "What do you know from cognee?" — if it responds with knowledge from your brain, you're connected.` },
+    ],
+  },
+  {
+    key: "opencode",
+    name: "OpenCode",
+    cta: "Connect via plugin",
+    description: "Give OpenCode persistent memory across sessions.",
+    icon: imgIcon("/visuals/logos/opencode.svg", "OpenCode"),
+    buildSteps: (baseUrl, apiKey, loading) => [
+      credStep(baseUrl, apiKey, loading),
+      {
+        title: "Install the Cognee plugin",
+        description: "Run these in your terminal one at a time — enable OpenCode hooks, register the Cognee marketplace, then install the memory plugin.",
+        codeBlocks: [
+          { code: OPENCODE_HOOKS_ENABLE },
+          { code: OPENCODE_MARKETPLACE_ADD },
+          { code: OPENCODE_PLUGIN_INSTALL },
+        ],
+      },
+      {
+        title: "Upload something to Cognee",
+        description: "Pick one and paste it into OpenCode — it stores the content in your Cognee memory so you can recall it next.",
+        codeBlocks: [
+          { label: "Option A · Your existing memory", code: UPLOAD_MEMORY_PROMPT },
+          { label: "Option B · Try it with a sample", code: UPLOAD_SAMPLE_PROMPT },
+        ],
+      },
+      {
+        title: "Recall it from Cognee",
+        description: "First end the session to sync it into Cognee Cloud — then reopen OpenCode and ask the question below. Answering from a fresh session proves it's recalling from your cloud memory.",
+        codeBlocks: [
+          { code: "/exit" },
+          { code: RECALL_SAMPLE_PROMPT },
+        ],
+      },
+      {
+        title: "You're all set",
+        description: "The Cognee plugin hooks into OpenCode's lifecycle — no curl or manual API calls — and captures your session as you work. When a session ends, it consolidates that session into your Cognee Cloud knowledge graph, and every new session automatically recalls it back. Sessions are disposable; your memory isn't.",
+      },
     ],
   },
   {
