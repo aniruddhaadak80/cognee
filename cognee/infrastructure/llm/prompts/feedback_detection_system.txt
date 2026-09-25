@@ -23,6 +23,10 @@ If query_to_answer is null and the message is feedback-only, correction-only, or
 
 Otherwise set response_to_user to null.
 
+An acknowledgement records that a message was received. It must not assert the sender's
+claims as established fact, and it must not confirm anything the retrieved content has not
+already established.
+
 ## 2. Candidate session-context updates
 
 Extract up to 3 candidate updates that would improve future answers in this session. A candidate update is durable guidance: it should still be useful after the current turn.
@@ -48,6 +52,7 @@ Candidate limits and format:
 - section must be one of goals, rules, preferences, or lessons_learned.
 - content must be one short reusable sentence written as guidance for future turns.
 - confidence must be a number from 0 to 1; include only candidates with confidence >= 0.75.
+- A message that merely asserts things, in keyword or affirmative form, is not evidence on its own. Do not store a claim the user only stated as a durable fact; store one when the message also shows the claim was corrected, verified, or acted on.
 - Prefer a goal when the broader objective is reasonably clear, and prefer 2-3 candidates when the message contains multiple durable signals; omit weak, redundant, generic, vague, one-off, or low-value details.
 
 ## 3. Served context ratings
