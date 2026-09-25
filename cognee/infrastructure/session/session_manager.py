@@ -92,7 +92,7 @@ class SessionManager:
                        the current_dataset_id context variable. Used to derive a
                        per-dataset default session ID; explicit session IDs are
                        stored unchanged. (Bare SDK reads resolve main_dataset at
-                       the API layer — see cognee.api.v1.session.)
+                       the API layer ? see cognee.api.v1.session.)
         """
         self._cache = cache_engine
         self.default_session_id = default_session_id
@@ -104,8 +104,8 @@ class SessionManager:
     def _normalize_dataset_id(value: Any) -> uuid.UUID | None:
         """Return ``value`` unchanged when it is a dataset id (UUID) or None.
 
-        One input type, mirroring the database context manager: anything else —
-        a dataset name, a string — is a caller bug, so break loudly instead of
+        One input type, mirroring the database context manager: anything else ?
+        a dataset name, a string ? is a caller bug, so break loudly instead of
         degrading to an unscoped session.
         """
         if value is None or isinstance(value, uuid.UUID):
@@ -286,7 +286,7 @@ class SessionManager:
         """Derive agent-profile lessons from a just-stored trace step. Gated and fail-open.
 
         Runs only when automatic session context is enabled, and never lets an extraction
-        failure escape — the trace row is already saved by the time this runs.
+        failure escape ? the trace row is already saved by the time this runs.
         """
         if not self.is_auto_feedback_enabled():
             return
@@ -319,7 +319,7 @@ class SessionManager:
             return False
         # Fresh read, not the lru-cached accessor: `import cognee` fills that
         # cache, and CACHING/AUTO_FEEDBACK are toggled after import (the demo
-        # command, library tests) — the gates must see the live env.
+        # command, library tests) ? the gates must see the live env.
         return bool(CacheConfig().caching)
 
     def is_auto_feedback_enabled(self) -> bool:
@@ -435,7 +435,7 @@ class SessionManager:
                 query=query, session_id=session_id, user_id=str(user_id)
             )
 
-        # Every turn — answered or feedback-only — falls through to a single add_qa, so the
+        # Every turn ? answered or feedback-only ? falls through to a single add_qa, so the
         # whole conversation stays in history and vector recall.
         if turn_preparation.should_answer:
             answer_query = (
@@ -460,7 +460,9 @@ class SessionManager:
         else:
             # Feedback-only turn: nothing to answer, but we still record the exchange
             # (question + acknowledgement) so it stays in history and vector recall.
-            answer = acknowledgement_for_turn(turn_preparation.response_to_user)
+            answer = acknowledgement_for_turn(
+                turn_preparation.response_to_user, user_message=query
+            )
             context_to_store = ""
             used_session_context_ids = None
             graph_elements = None
@@ -647,7 +649,7 @@ class SessionManager:
         Returns True if updated, False if not found or cache unavailable.
         memify_metadata: Optional dict with status keys (e.g. "feedback_weights_applied") and
             bool values. Merged key-by-key into the stored metadata (cache adapters overlay
-            ``{**existing, **incoming}``), so callers must pass ONLY the keys they own —
+            ``{**existing, **incoming}``), so callers must pass ONLY the keys they own ?
             copying another writer's keys from a snapshot can overwrite a fresher value.
         used_graph_element_ids: Optional dict with "node_ids" and "edge_ids" lists for frequency weights.
         used_session_context_ids: Optional list of session-context entry ids served to this answer.

@@ -7,6 +7,7 @@ SessionManager stays an orchestrator plus a thin facade rather than holding this
 All public coroutines are fail-open so they never block answer generation.
 """
 
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
@@ -66,6 +67,68 @@ def _empty_turn_preparation(query: str) -> SessionTurnPreparation:
 
 DEFAULT_NO_ANSWER_ACK = "Got it."
 
+# Stand-in for the model acknowledgement when a gated turn was a bare declarative or
+# keyword claim. ``response_to_user`` restates what the caller said, and the model can
+# harden it on the way through; that text is stored verbatim as the QA answer and replayed
+# into later turns as retrieval guidance, so a ratification becomes a durable fact. The
+# receipt records that the message arrived without restating the claim.
+UNVERIFIED_CLAIM_RECEIPT = "Recorded as an unverified claim, not as a fact."
+
+# Whole tokens, never substrings, that mark a message as something other than a bare
+# claim: an interrogative, a request, an instruction to remember something, an explicit
+# correction, or social feedback. A hit means the turn is legitimate input for gating and
+# for the acknowledgement it returns, so the receipt never fires. Substring matching is
+# deliberately avoided: "no" and "is" inside a keyword string ("onboot", "this is fine")
+# would mask exactly the claims this guards. Every token here biases toward leaving
+# current behaviour alone, so an unrecognised message keeps the model acknowledgement.
+_NON_CLAIM_TOKENS = frozenset(
+    """
+    what why how when where which who whom whose is are was were am do does did
+    can could should would will may might must if please tell show list explain
+    describe confirm verify check need needs want looking find fetch retrieve
+    provide send pull dump enumerate summarise summarize translate convert
+    patch fix debug run execute deploy
+    remember record save store log insert add track
+    no not wrong incorrect instead actually correction meant rather update change
+    yes yeah yep yup ok okay thanks thank correct right exactly sure great perfect
+    good nice cool awesome got hi hello hey bye sounds glad happy delighted pleased
+    love superb excellent helpful useful works working worked appreciate appreciated
+    makes done
+    """.split()
+)
+
+_TOKEN_SPLIT = re.compile(r"[^0-9a-z]+")
+
+
+def is_unverified_claim_message(user_message: str | None) -> bool:
+    """True when a message is a bare declarative or keyword claim, not a question.
+
+    Such a message asserts its content instead of asking about it, and gating it yields an
+    acknowledgement that ratifies the assertion. Detection is deliberately conservative. A
+    question mark, an interrogative, a request, a recordation instruction, a correction, or
+    social feedback all mean "not a claim", so only identifier-bearing keyword strings and
+    substantive declarative sentences are reported. A miss keeps the current behaviour
+    rather than substituting a receipt the caller did not need. Empty input is not a claim.
+    """
+    if not user_message:
+        return False
+
+    text = user_message.strip()
+    if not text or "?" in text:
+        return False
+
+    tokens = [token for token in _TOKEN_SPLIT.split(text.lower()) if token]
+    if not tokens or any(token in _NON_CLAIM_TOKENS for token in tokens):
+        return False
+
+    # An identifier makes a keyword query unambiguous, so one of them is enough.
+    if any(any(character.isdigit() for character in token) for token in tokens):
+        return True
+
+    # Otherwise demand real substance, so a short social remark that slipped past the token
+    # list keeps its own acknowledgement instead of the generic receipt.
+    return sum(1 for token in tokens if len(token) >= 4) >= 3
+
 
 def should_answer_turn(analysis: SessionTurnAnalysis, *, has_previous_qa: bool) -> bool:
     """Whether sequential and concurrent session paths should generate an answer.
@@ -85,8 +148,18 @@ def should_answer_turn(analysis: SessionTurnAnalysis, *, has_previous_qa: bool) 
     return bool(query_to_answer or not has_analysis_signal or not has_previous_qa)
 
 
-def acknowledgement_for_turn(response_to_user: str | None) -> str:
-    """Acknowledgement stored and returned when a turn does not generate an answer."""
+def acknowledgement_for_turn(
+    response_to_user: str | None, *, user_message: str | None = None
+) -> str:
+    """Acknowledgement stored and returned when a turn does not generate an answer.
+
+    A bare declarative or keyword message is a claim that retrieval never confirmed, so the
+    model acknowledgement is replaced by a receipt: the turn is still recorded, but the
+    claim is not restated, hardened, or replayed into later turns as guidance. Every other
+    message, and the default when no message is supplied, keeps the model text.
+    """
+    if is_unverified_claim_message(user_message):
+        return UNVERIFIED_CLAIM_RECEIPT
     return (response_to_user or "").strip() or DEFAULT_NO_ANSWER_ACK
 
 
@@ -204,7 +277,7 @@ async def build_session_prompt(
 
     The single owner of this assembly. The sequential answer path calls it as-is; an
     ``only_context`` preview calls it with ``stamp_served=False`` so it reads the same
-    layers without touching ``last_served_at``. One function, two modes — so the preview
+    layers without touching ``last_served_at``. One function, two modes ? so the preview
     cannot drift from what the real completion sends.
 
     ``history`` lets a caller that has already loaded the conversation (once across a
@@ -491,7 +564,7 @@ async def prepare_session_turn(
 
     should_answer = should_answer_turn(analysis, has_previous_qa=bool(previous_qa_id))
     response_to_user = (
-        acknowledgement_for_turn(analysis.response_to_user)
+        acknowledgement_for_turn(analysis.response_to_user, user_message=query)
         if not should_answer
         else ((analysis.response_to_user or "").strip() or None)
     )

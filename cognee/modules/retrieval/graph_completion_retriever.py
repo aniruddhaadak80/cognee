@@ -142,7 +142,7 @@ class GraphCompletionRetriever(BaseRetriever):
             # loudly (404 over the API) the same way the RAG retriever raises
             # on a missing vector collection, instead of quietly returning
             # nothing. A populated graph with no matching triplets still
-            # yields an empty result below — that is a normal miss.
+            # yields an empty result below ? that is a normal miss.
             raise NoDataError(
                 "The knowledge graph is empty. Ingest data through Cognee before searching."
             )
@@ -197,9 +197,9 @@ class GraphCompletionRetriever(BaseRetriever):
         collections = self._get_vector_index_collections()
         unified_engine = getattr(self, "_unified_engine", None)
         # Personal prefers weights ride into the triplet scorer. The lookup is
-        # memoized per context — on a concurrent session turn each gather lane
+        # memoized per context ? on a concurrent session turn each gather lane
         # inherits the read warmed by warm_preference_cache; without that warm
-        # a lane's read is its own — and fails open: flag off, no node, or any
+        # a lane's read is its own ? and fails open: flag off, no node, or any
         # error yields {}, so the search stays byte-identical to an
         # un-personalized run.
         personal_weights = await load_preference_weights()
@@ -347,7 +347,7 @@ class GraphCompletionRetriever(BaseRetriever):
         # session prompt, never context. The lookup is memoized per
         # context; this sessionless path runs retrieval and completion in one
         # context, so this reuses the get_triplets read. (Across a task
-        # fan-out that sharing needs warm_preference_cache in the parent — the
+        # fan-out that sharing needs warm_preference_cache in the parent ? the
         # ContextVar does not propagate out of gather lanes.) Empty text is
         # falsy and adds nothing to the prompt. The session path never
         # reaches this method, so it cannot collide with the session guidance
@@ -465,7 +465,9 @@ class GraphCompletionRetriever(BaseRetriever):
             if not turn_preparation.should_answer:
                 from cognee.infrastructure.session.session_turn import acknowledgement_for_turn
 
-                return [acknowledgement_for_turn(turn_preparation.response_to_user)]
+                return [
+                    acknowledgement_for_turn(turn_preparation.response_to_user, user_message=query)
+                ]
             effective_query = turn_preparation.effective_query or query
 
         retrieved_objects = await self.get_retrieved_objects(

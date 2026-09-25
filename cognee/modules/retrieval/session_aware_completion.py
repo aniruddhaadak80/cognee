@@ -1,6 +1,6 @@
 """Session-aware completion for ``get_retriever_output``.
 
-Public door: ``run_session_aware_completion`` → concurrent or sequential runner.
+Public door: ``run_session_aware_completion`` ? concurrent or sequential runner.
 Both return ``(retrieved_objects, context, completion)``. Retriever ``get_completion``
 stays as on ``dev`` and does not call this module.
 
@@ -346,12 +346,12 @@ async def run_concurrent_session_turn(
         stored_answer = (
             generated_answer
             if should_answer
-            else acknowledgement_for_turn(analysis.response_to_user)
+            else acknowledgement_for_turn(analysis.response_to_user, user_message=raw_query)
         )
 
         if generated_answer is None:
             # Empty-context skip in the answer lane: no answer was generated,
-            # so there is no QA turn to record — mirroring the sequential
+            # so there is no QA turn to record ? mirroring the sequential
             # path, where the guard fires before the session completion runs.
             return retrieved_objects, context, []
 
@@ -408,7 +408,7 @@ async def run_sequential_session_turn(
     only_context: bool = False,
     search_type_for_spans: SearchType | None = None,
 ) -> tuple[Any, Any, Any]:
-    """Prepare → objects → context → completion (the ``dev`` search path).
+    """Prepare ? objects ? context ? completion (the ``dev`` search path).
 
     Returns ``(retrieved_objects, context, completion)``.
     """
@@ -419,7 +419,9 @@ async def run_sequential_session_turn(
     if not only_context and getattr(retriever, "supports_session_turn_preparation", True):
         turn_preparation = await retriever.prepare_session_turn_for_retrieval(raw_query)
         if not turn_preparation.should_answer:
-            acknowledgement = acknowledgement_for_turn(turn_preparation.response_to_user)
+            acknowledgement = acknowledgement_for_turn(
+                turn_preparation.response_to_user, user_message=raw_query
+            )
             await _record_no_answer_turn(retriever, raw_query=raw_query, answer=acknowledgement)
             return None, None, [acknowledgement]
         effective_query = turn_preparation.effective_query or raw_query
