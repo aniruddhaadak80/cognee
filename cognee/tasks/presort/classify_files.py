@@ -10,6 +10,7 @@ content taxonomy (``classify_content.txt``) refines text files with a
 
 import asyncio
 
+from cognee.infrastructure.files.utils.text_encoding import decode_text_content
 from cognee.shared.logging_utils import get_logger
 
 from .models import FileRecord
@@ -96,7 +97,7 @@ async def _llm_classify(record: FileRecord) -> None:
 
     try:
         with open(record.path, "rb") as file:
-            sample = file.read(_LLM_SAMPLE_CHARS * 4).decode("utf-8", errors="replace")
+            sample = decode_text_content(file.read(_LLM_SAMPLE_CHARS * 4))
     except OSError as error:
         record.warnings.append(f"could not read sample for classification: {error}")
         return

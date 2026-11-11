@@ -14,6 +14,7 @@ from cognee.tasks.presort.detect_pii import (
     scan_filename,
 )
 from cognee.tasks.presort.models import FileRecord
+from cognee.tasks.presort.scan_folder import scan_folder
 
 
 def _text_record(tmp_path, name: str, text: str) -> FileRecord:
@@ -83,6 +84,22 @@ async def test_detect_pii_deterministic(tmp_path):
 
     assert {finding.path for finding in findings} == {record.path}
     assert findings[0].category == "email_address"
+
+
+@pytest.mark.asyncio
+async def test_detect_pii_scans_utf16_file(messy_folder):
+    """A UTF-16 note (Notepad's "Unicode") is scanned like its UTF-8 twin (issue #6563)."""
+    files, _ = await scan_folder(messy_folder)
+
+    findings = await detect_pii(files)
+
+    by_path = {}
+    for finding in findings:
+        by_path.setdefault(finding.path, set()).add(finding.category)
+    utf8 = next(record for record in files if record.name == "contact_utf8.txt")
+    utf16 = next(record for record in files if record.name == "contact_utf16.txt")
+    assert "email_address" in by_path[utf8.path]
+    assert "email_address" in by_path[utf16.path]
 
 
 @pytest.mark.asyncio
